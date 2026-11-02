@@ -1,0 +1,42 @@
+# Converts any pull request opened (or reopened) as "ready for review" back to a draft.
+#
+# Why: AI agents must open PRs as drafts so that a person decides when a PR is
+# ready. Agent instruction files only ask for this; this workflow enforces it.
+#
+# Trigger: pull_request_target runs the copy of this file on the default branch.
+# So PRs that edit this file, have merge conflicts, or target another branch
+# are still handled. It is safe only because the job never checks out or runs
+# code from the PR. Do NOT add actions/checkout of the PR head to this file.
+#
+# Not covered:
+# - Marking a PR ready later (button, gh pr ready, API). That is left to a person.
+# - PRs opened with the default Actions token (github-actions[bot]). GitHub
+#   never triggers workflows for those.
+# - Exempt authors, listed in the job's `if:` as "<app-name>[bot]".
+# - It also applies to PRs people open themselves. GitHub can't tell a local
+#   agent from the person running it, because both use the same login.
+
+name: enforce-draft
+
+on:
+  pull_request_target:
+    types: [opened, reopened]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  draft:
+    if: >-
+      github.event.pull_request.draft == false &&
+      !contains(fromJSON('["repo-mgmt-rzp[bot]"]'), github.event.pull_request.user.login)
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Convert to draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: |
+          gh pr ready "$PR_URL" --undo
+          gh pr comment "$PR_URL" --body "This PR was opened as ready for review, so it has been converted to a draft. When it is ready, a person should mark it ready for review. Agents must not do this."
