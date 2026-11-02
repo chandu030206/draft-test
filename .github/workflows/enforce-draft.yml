@@ -6,7 +6,8 @@
 # Trigger: pull_request_target runs the copy of this file on the default branch.
 # So PRs that edit this file, have merge conflicts, or target another branch
 # are still handled. It is safe only because the job never checks out or runs
-# code from the PR. Do NOT add actions/checkout of the PR head to this file.
+# code from the PR. The token can push to the repo (contents: write), so NEVER
+# add actions/checkout of the PR head or run any PR-provided code in this file.
 #
 # Not covered:
 # - Marking a PR ready later (button, gh pr ready, API). That is left to a person.
@@ -23,8 +24,8 @@ on:
     types: [opened, reopened]
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: write        # needed: without it, converting to draft fails with
+  pull-requests: write   # "Resource not accessible by integration"
 
 jobs:
   draft:
